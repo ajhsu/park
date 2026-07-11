@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GROUND_RADIUS, MODEL_FORWARD_OFFSET, MOVE_SPEED, TURN_SPEED } from '../config';
-import type { KeyState } from '../input/keyboard';
+import type { MovementInput } from '../input/movement';
 import type { PigeonModel } from './pigeonModel';
 
 /**
- * The player-controlled pigeon: camera-relative WASD movement, turning to
- * face its heading, with the camera and orbit target following along.
+ * The player-controlled pigeon: camera-relative movement (keyboard or the
+ * touch joystick), turning to face its heading, with the camera and orbit
+ * target following along.
  */
 export class Player {
   readonly pivot: THREE.Group;
@@ -22,7 +23,7 @@ export class Player {
     scene: THREE.Scene,
     private readonly camera: THREE.PerspectiveCamera,
     private readonly controls: OrbitControls,
-    private readonly keys: KeyState,
+    private readonly input: MovementInput,
     model: PigeonModel,
   ) {
     this.pivot = new THREE.Group();
@@ -32,7 +33,7 @@ export class Player {
   }
 
   update(delta: number): void {
-    const { pivot, camera, controls, keys, moveVec, camForward, camRight, worldUp } = this;
+    const { pivot, camera, controls, moveVec, camForward, camRight, worldUp } = this;
 
     // Horizontal camera basis vectors.
     camera.getWorldDirection(camForward);
@@ -40,13 +41,13 @@ export class Player {
     camForward.normalize();
     camRight.crossVectors(camForward, worldUp).normalize();
 
-    moveVec.set(0, 0, 0);
-    if (keys.w) moveVec.add(camForward);
-    if (keys.s) moveVec.sub(camForward);
-    if (keys.d) moveVec.add(camRight);
-    if (keys.a) moveVec.sub(camRight);
+    const { forward, strafe } = this.input.read();
+    const inputMag = Math.min(1, Math.hypot(forward, strafe));
 
-    if (moveVec.lengthSq() > 0) {
+    if (inputMag > 0.001) {
+      moveVec.set(0, 0, 0);
+      moveVec.addScaledVector(camForward, forward);
+      moveVec.addScaledVector(camRight, strafe);
       moveVec.normalize();
 
       // Turn the pigeon to face where it's walking.
@@ -56,7 +57,8 @@ export class Player {
       const prevX = pivot.position.x;
       const prevZ = pivot.position.z;
 
-      const step = MOVE_SPEED * delta;
+      // Analog input scales speed (partial tilt walks slower).
+      const step = MOVE_SPEED * inputMag * delta;
       pivot.position.addScaledVector(moveVec, step);
 
       // Clamp to the ground disc.

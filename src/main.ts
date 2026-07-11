@@ -6,7 +6,7 @@ import { createScene } from './core/scene';
 import { createCamera, createControls } from './core/camera';
 import { addLights } from './core/lights';
 import { buildPark } from './world/park';
-import { createKeyboard } from './input/keyboard';
+import { createMovementInput } from './input/movement';
 import { loadPigeonModel } from './entities/pigeonModel';
 import { Player } from './entities/player';
 import { spawnNpcs, type Npc, type NpcAudio } from './entities/npc';
@@ -25,7 +25,7 @@ const controls = createControls(camera, renderer.domElement);
 addLights(scene);
 buildPark(scene);
 
-const keys = createKeyboard();
+const movementInput = createMovementInput();
 
 // --- Audio (3D positional cooing) ---
 const listener = new THREE.AudioListener();
@@ -46,7 +46,7 @@ let npcs: Npc[] = [];
 
 loadPigeonModel()
   .then(async (model) => {
-    player = new Player(scene, camera, controls, keys, model);
+    player = new Player(scene, camera, controls, movementInput, model);
 
     // Load the coo audio; if it fails, the pigeons simply stay silent.
     const cooBuffer = await loadCooBuffer().catch((err) => {
