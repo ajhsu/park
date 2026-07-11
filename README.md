@@ -1,4 +1,4 @@
-# Pigeon in the Park 🐦
+# Pigeon in the Park
 
 You are a pigeon. There is a park. You walk around. That's basically it.
 

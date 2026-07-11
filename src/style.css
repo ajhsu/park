@@ -128,7 +128,8 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1;
   color: #eef2fb;
   background: rgba(255, 255, 255, 0.12);
@@ -239,32 +240,36 @@ canvas {
   background: rgba(255, 255, 255, 0.22);
 }
 
-/* Feed button (bottom-centre, person mode only). */
+/* Feed button (bottom-centre, person mode only). Styled like the pigeon
+   action buttons and raised above the HUD hint line so they never overlap. */
 #feed-btn {
   position: fixed;
-  bottom: 30px;
+  bottom: 56px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 14px 28px;
-  font-size: 17px;
-  font-weight: 700;
-  color: #3a2b12;
-  background: linear-gradient(#ffe08a, #f4c14e);
-  border: none;
-  border-radius: 30px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  height: 44px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #eef2fb;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 22px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
   transition:
     transform 0.08s ease,
-    filter 0.15s ease;
+    background 0.15s ease;
   z-index: 30;
   display: none;
 }
 
 #feed-btn:hover {
-  filter: brightness(1.05);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 #feed-btn:active {
@@ -278,6 +283,50 @@ body.mode-person #feed-btn {
 
 body.mode-person #joystick {
   display: none !important;
+}
+
+/* Pigeon action buttons (bottom-centre, pigeon mode only). Raised above the
+   HUD hint line so the control instructions never run underneath them. */
+#pigeon-actions {
+  position: fixed;
+  bottom: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  gap: 12px;
+  z-index: 30;
+}
+
+body.mode-pigeon #pigeon-actions {
+  display: flex;
+}
+
+#pigeon-actions button {
+  padding: 0 20px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #eef2fb;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 22px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition:
+    transform 0.08s ease,
+    background 0.15s ease;
+}
+
+#pigeon-actions button:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+#pigeon-actions button:active {
+  transform: scale(0.95);
 }
 
 /* --- Compact layout for narrow / mobile screens --- */
@@ -301,7 +350,7 @@ body.mode-person #joystick {
     right: 12px;
     width: 38px;
     height: 38px;
-    font-size: 17px;
+    font-size: 10px;
   }
 
   #mode-toggle {
@@ -328,8 +377,6 @@ body.mode-person #joystick {
     right: 16px;
     bottom: 20px;
     transform: none;
-    padding: 12px 24px;
-    font-size: 15px;
   }
 
   #feed-btn:active {
@@ -340,6 +387,21 @@ body.mode-person #joystick {
   #joystick {
     left: 16px;
     bottom: 88px;
+  }
+
+  /* Keep the action buttons bottom-right, stacked above nothing but clear of
+     the joystick on the left. */
+  #pigeon-actions {
+    left: auto;
+    right: 16px;
+    bottom: 20px;
+    transform: none;
+    gap: 10px;
+  }
+
+  #pigeon-actions button {
+    padding: 12px 18px;
+    font-size: 14px;
   }
 }
 

@@ -51,7 +51,7 @@ if (muteBtn) {
   muteBtn.addEventListener('click', () => {
     muted = !muted;
     listener.setMasterVolume(muted ? 0 : 1);
-    muteBtn.textContent = muted ? '🔇' : '🔊';
+    muteBtn.textContent = muted ? 'Muted' : 'Sound';
     muteBtn.classList.toggle('muted', muted);
     muteBtn.setAttribute('aria-pressed', String(muted));
     const label = muted ? 'Unmute sound' : 'Mute sound';
@@ -112,12 +112,12 @@ function applyMode(): void {
   person?.setVisible(isPerson);
 
   if (modeToggle) {
-    modeToggle.textContent = isPerson ? '\uD83D\uDD4A\uFE0F Switch to Pigeon' : '\uD83E\uDDCD Switch to Person';
+    modeToggle.textContent = isPerson ? 'Switch to Pigeon' : 'Switch to Person';
   }
   if (hintEl) {
     hintEl.innerHTML = isPerson
       ? 'Tap <b>Feed</b> to scatter rice — the flock will come and eat · drag to look around'
-      : '<b>WASD</b> or the on-screen joystick to walk · drag to orbit · pinch/scroll to zoom';
+      : '<b>WASD</b> or the on-screen joystick to walk · <b>C</b> to coo, <b>F</b> to fight · drag to orbit · pinch/scroll to zoom';
   }
 
   if (isPerson) focusCameraOnPerson();
@@ -133,6 +133,32 @@ feedBtn?.addEventListener('click', () => {
   if (rice && person) rice.scatter(person.feedPoint.x, person.feedPoint.z, RICE_PER_FEED);
 });
 
+// --- Pigeon actions: a friendly coo the flock warms to, and an aggressive
+// fight display that scatters them. Both only apply in pigeon mode.
+const cooBtn = document.getElementById('coo-btn') as HTMLButtonElement | null;
+const fightBtn = document.getElementById('fight-btn') as HTMLButtonElement | null;
+
+function playerCoo(): void {
+  if (mode !== 'pigeon' || !player) return;
+  player.coo();
+  for (const npc of npcs) npc.reactToPlayerCoo(player.pivot.position);
+}
+
+function playerFight(): void {
+  if (mode !== 'pigeon' || !player) return;
+  player.fight();
+  for (const npc of npcs) npc.reactToPlayerFight(player.pivot.position);
+}
+
+cooBtn?.addEventListener('click', playerCoo);
+fightBtn?.addEventListener('click', playerFight);
+
+window.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  if (e.code === 'KeyC') playerCoo();
+  else if (e.code === 'KeyF') playerFight();
+});
+
 loadPigeonModel()
   .then(async (model) => {
     player = new Player(scene, camera, controls, movementInput, model);
@@ -143,6 +169,7 @@ loadPigeonModel()
       return null;
     });
     const npcAudio: NpcAudio | undefined = cooBuffer ? { listener, cooBuffer } : undefined;
+    if (cooBuffer) player.enableCoo(listener, cooBuffer);
     rice = new RiceSystem(scene);
     npcs = spawnNpcs(
       scene,

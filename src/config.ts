@@ -29,6 +29,16 @@ export const PLAYER_CHARM_RANGE = 13; // radius within which NPCs are drawn to t
 export const PLAYER_GATHER_RADIUS = 2.4; // ring radius NPCs gather in around the player
 export const PLAYER_APPROACH_CHANCE = 0.75; // chance an in-range NPC chooses to approach the player
 
+/**
+ * Player actions (pigeon mode): a friendly "coo" that draws NPCs in, and an
+ * aggressive "fight" display that makes them scatter defensively.
+ */
+export const PLAYER_COO_RANGE = 10; // NPCs within this warm up and approach when the player coos
+export const PLAYER_COO_DURATION = 0.9; // seconds the player's coo display lasts
+export const PLAYER_FIGHT_RANGE = 8; // NPCs within this feel threatened and back off
+export const PLAYER_FIGHT_DURATION = 0.7; // seconds the player's fight display lasts
+export const PLAYER_FIGHT_FLEE_TIME = 2.2; // how long a spooked NPC keeps fleeing the player
+
 /** NPC cooing (3D positional audio) tuning. */
 export const COO_MIN_INTERVAL = 30; // seconds — shortest gap between an NPC's coos
 export const COO_MAX_INTERVAL = 120; // seconds — longest gap between an NPC's coos

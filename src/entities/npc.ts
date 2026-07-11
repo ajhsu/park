@@ -13,6 +13,9 @@ import {
   PIGEON_COLLISION_RADIUS,
   PLAYER_APPROACH_CHANCE,
   PLAYER_CHARM_RANGE,
+  PLAYER_COO_RANGE,
+  PLAYER_FIGHT_FLEE_TIME,
+  PLAYER_FIGHT_RANGE,
   PLAYER_GATHER_RADIUS,
   RICE_EAT_DISTANCE,
 } from '../config';
@@ -132,7 +135,7 @@ export class Npc {
   private readonly playerAnchor: GatherAnchor | null;
   private socialTimer = rand(1.5, 4);
   private chaseTarget: Npc | null = null;
-  private fleeFrom: Npc | null = null;
+  private fleeOrigin: { x: number; z: number } | null = null;
   private fightPartner: Npc | null = null;
   private fightPhase = 0;
 
@@ -187,6 +190,41 @@ export class Npc {
   /** Give this pigeon awareness of the whole flock for social behaviour. */
   setFlock(flock: Npc[]): void {
     this.flock = flock;
+  }
+
+  /**
+   * React to the player's friendly coo: if in earshot, turn toward the player,
+   * amble over to gather round it, and coo back in acknowledgement. A spooked
+   * or squabbling bird is too busy to respond.
+   */
+  reactToPlayerCoo(player: THREE.Vector3): void {
+    if (this.state === 'flee' || this.state === 'fight') return;
+    const dx = player.x - this.group.position.x;
+    const dz = player.z - this.group.position.z;
+    if (Math.hypot(dx, dz) > PLAYER_COO_RANGE) return;
+
+    this.targetHeading = Math.atan2(dx, dz); // look toward the friendly caller
+    this.target = this.ringTarget(player.x, player.z, 1.0, PLAYER_GATHER_RADIUS);
+    this.state = 'walk';
+    this.socialTimer = rand(4, 7); // linger nearby rather than wandering off
+    if (this.coo) this.cooTimer = rand(0.2, 0.8); // coo back shortly
+  }
+
+  /**
+   * React to the player's aggressive display: if within the threat range, drop
+   * whatever it's doing and scurry defensively away from the player.
+   */
+  reactToPlayerFight(player: THREE.Vector3): void {
+    const dx = this.group.position.x - player.x;
+    const dz = this.group.position.z - player.z;
+    if (Math.hypot(dx, dz) > PLAYER_FIGHT_RANGE) return;
+
+    this.chaseTarget = null;
+    this.fightPartner = null;
+    this.inner.rotation.z = 0;
+    this.fleeOrigin = player; // flee from the player's live position
+    this.state = 'flee';
+    this.timer = PLAYER_FIGHT_FLEE_TIME;
   }
 
   update(delta: number): void {
@@ -397,7 +435,7 @@ export class Npc {
 
   /** Enter the fleeing state, running away from the given chaser. */
   private startFlee(from: Npc): void {
-    this.fleeFrom = from;
+    this.fleeOrigin = from.group.position;
     this.state = 'flee';
     this.timer = rand(1.2, 2.6);
   }
@@ -431,17 +469,17 @@ export class Npc {
     this.strut(dx, dz, dist, this.speed + 1.4, delta);
   }
 
-  /** Scurry directly away from the chaser, steering back inside the park. */
+  /** Scurry directly away from the flee origin, steering back inside the park. */
   private updateFlee(delta: number): void {
-    const chaser = this.fleeFrom;
+    const origin = this.fleeOrigin;
     this.timer -= delta;
-    if (!chaser || this.timer <= 0) {
-      this.fleeFrom = null;
+    if (!origin || this.timer <= 0) {
+      this.fleeOrigin = null;
       this.endInteraction();
       return;
     }
-    let dx = this.group.position.x - chaser.group.position.x;
-    let dz = this.group.position.z - chaser.group.position.z;
+    let dx = this.group.position.x - origin.x;
+    let dz = this.group.position.z - origin.z;
     const dist = Math.hypot(dx, dz) || 1;
     dx /= dist;
     dz /= dist;

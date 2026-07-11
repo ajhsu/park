@@ -10,12 +10,16 @@
   </head>
   <body>
     <div id="app"></div>
-    <div id="title">🕊️ Pigeon in the Park</div>
+    <div id="title">Pigeon in the Park</div>
     <button id="mute-btn" type="button" aria-label="Mute sound" aria-pressed="false" title="Mute sound">
-      🔊
+      Sound
     </button>
     <button id="mode-toggle" type="button">Switch to Pigeon</button>
     <button id="feed-btn" type="button">Feed</button>
+    <div id="pigeon-actions">
+      <button id="coo-btn" type="button" title="Coo (C) — send a friendly signal">Coo</button>
+      <button id="fight-btn" type="button" title="Fight (F) — puff up aggressively">Fight</button>
+    </div>
     <div id="loader">
       <div class="spinner"></div>
       <div>Loading pigeon…</div>
@@ -24,7 +28,7 @@
     <div id="hud">
       <span id="hint"></span>
       <button id="credits-btn" type="button" aria-expanded="false" title="Show credits">
-        ⓘ Credits
+        Credits
       </button>
       <!-- Attribution shown on demand via the Credits button (assets are CC-BY / CC BY-SA / CC0). -->
       <span id="credits" hidden
