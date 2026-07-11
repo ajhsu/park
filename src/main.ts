@@ -40,6 +40,22 @@ const resumeAudio = (): void => {
 window.addEventListener('pointerdown', resumeAudio);
 window.addEventListener('keydown', resumeAudio);
 
+// --- Mute toggle (sound defaults to on) ---
+const muteBtn = document.getElementById('mute-btn') as HTMLButtonElement | null;
+let muted = false;
+if (muteBtn) {
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    listener.setMasterVolume(muted ? 0 : 1);
+    muteBtn.textContent = muted ? '🔇' : '🔊';
+    muteBtn.classList.toggle('muted', muted);
+    muteBtn.setAttribute('aria-pressed', String(muted));
+    const label = muted ? 'Unmute sound' : 'Mute sound';
+    muteBtn.setAttribute('aria-label', label);
+    muteBtn.title = label;
+  });
+}
+
 // --- Entities (created once the model has loaded) ---
 let player: Player | null = null;
 let npcs: Npc[] = [];
