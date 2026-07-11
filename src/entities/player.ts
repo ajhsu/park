@@ -11,8 +11,10 @@ import type { PigeonModel } from './pigeonModel';
  */
 export class Player {
   readonly pivot: THREE.Group;
+  private readonly inner: THREE.Object3D;
 
   private targetHeading = 0;
+  private bobPhase = 0;
 
   private readonly moveVec = new THREE.Vector3();
   private readonly camForward = new THREE.Vector3();
@@ -28,12 +30,17 @@ export class Player {
   ) {
     this.pivot = new THREE.Group();
     this.pivot.scale.setScalar(model.scale);
-    this.pivot.add(model.proto);
+
+    // Keep the model on an inner object so it can be tilted for the walking
+    // head-bob without disturbing the pivot's heading rotation.
+    this.inner = model.proto;
+    this.pivot.add(this.inner);
+
     scene.add(this.pivot);
   }
 
   update(delta: number): void {
-    const { pivot, camera, controls, moveVec, camForward, camRight, worldUp } = this;
+    const { pivot, inner, camera, controls, moveVec, camForward, camRight, worldUp } = this;
 
     // Horizontal camera basis vectors.
     camera.getWorldDirection(camForward);
@@ -71,6 +78,16 @@ export class Player {
       // Move the camera by the pigeon's actual displacement (respects clamping).
       camera.position.x += pivot.position.x - prevX;
       camera.position.z += pivot.position.z - prevZ;
+
+      // Characteristic head-bob + gentle body bob while strutting, like the NPCs.
+      this.bobPhase += delta * MOVE_SPEED * inputMag * 3.2;
+      inner.rotation.x = Math.sin(this.bobPhase) * 0.12;
+      pivot.position.y = Math.abs(Math.sin(this.bobPhase)) * 0.05;
+    } else {
+      // Settle back to a neutral standing pose when stopped.
+      const ease = Math.min(1, 8 * delta);
+      inner.rotation.x += (0 - inner.rotation.x) * ease;
+      pivot.position.y += (0 - pivot.position.y) * ease;
     }
 
     // Smoothly rotate the pigeon toward its heading (shortest path).

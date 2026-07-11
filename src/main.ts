@@ -11,6 +11,9 @@ import { loadPigeonModel } from './entities/pigeonModel';
 import { Player } from './entities/player';
 import { spawnNpcs, type Npc, type NpcAudio } from './entities/npc';
 import { loadCooBuffer } from './audio/coo';
+import { Person } from './entities/person';
+import { RiceSystem } from './world/rice';
+import { RICE_PER_FEED } from './config';
 
 const app = document.getElementById('app')!;
 const loaderEl = document.getElementById('loader');
@@ -56,9 +59,78 @@ if (muteBtn) {
   });
 }
 
+// --- Credits toggle (attribution hidden until requested) ---
+const creditsBtn = document.getElementById('credits-btn');
+const creditsEl = document.getElementById('credits');
+creditsBtn?.addEventListener('click', () => {
+  const show = creditsEl?.hasAttribute('hidden') ?? false;
+  if (show) creditsEl?.removeAttribute('hidden');
+  else creditsEl?.setAttribute('hidden', '');
+  creditsBtn.setAttribute('aria-expanded', String(show));
+  creditsBtn.title = show ? 'Hide credits' : 'Show credits';
+});
+
 // --- Entities (created once the model has loaded) ---
 let player: Player | null = null;
 let npcs: Npc[] = [];
+let person: Person | null = null;
+let rice: RiceSystem | null = null;
+
+// --- Game modes: 'pigeon' (default) and 'person' ---
+type Mode = 'person' | 'pigeon';
+let mode: Mode = 'pigeon';
+document.body.classList.add('mode-pigeon');
+
+const modeToggle = document.getElementById('mode-toggle') as HTMLButtonElement | null;
+const feedBtn = document.getElementById('feed-btn') as HTMLButtonElement | null;
+const hintEl = document.getElementById('hint');
+
+function focusCameraOnPerson(): void {
+  if (!person) return;
+  const p = person.group.position;
+  // Look toward the seated person from the front, framing the feeding area.
+  controls.target.set(p.x, 0.7, p.z + 1.4);
+  camera.position.set(p.x + 3.4, 2.4, p.z + 5.6);
+  controls.update();
+}
+
+function focusCameraOnPigeon(): void {
+  if (!player) return;
+  const p = player.pivot.position;
+  controls.target.set(p.x, 0.5, p.z);
+  camera.position.set(p.x + 3, 2.2, p.z + 5);
+  controls.update();
+}
+
+function applyMode(): void {
+  const isPerson = mode === 'person';
+  document.body.classList.toggle('mode-person', isPerson);
+  document.body.classList.toggle('mode-pigeon', !isPerson);
+
+  if (player) player.pivot.visible = !isPerson;
+  person?.setVisible(isPerson);
+
+  if (modeToggle) {
+    modeToggle.textContent = isPerson ? '\uD83D\uDD4A\uFE0F Switch to Pigeon' : '\uD83E\uDDCD Switch to Person';
+  }
+  if (hintEl) {
+    hintEl.innerHTML = isPerson
+      ? 'Tap <b>Feed</b> to scatter rice — the flock will come and eat · drag to look around'
+      : '<b>WASD</b> or the on-screen joystick to walk · drag to orbit · pinch/scroll to zoom';
+  }
+
+  if (isPerson) focusCameraOnPerson();
+  else focusCameraOnPigeon();
+}
+
+modeToggle?.addEventListener('click', () => {
+  mode = mode === 'person' ? 'pigeon' : 'person';
+  applyMode();
+});
+
+feedBtn?.addEventListener('click', () => {
+  if (rice && person) rice.scatter(person.feedPoint.x, person.feedPoint.z, RICE_PER_FEED);
+});
 
 loadPigeonModel()
   .then(async (model) => {
@@ -70,7 +142,11 @@ loadPigeonModel()
       return null;
     });
     const npcAudio: NpcAudio | undefined = cooBuffer ? { listener, cooBuffer } : undefined;
-    npcs = spawnNpcs(scene, model, npcAudio);
+    rice = new RiceSystem(scene);
+    npcs = spawnNpcs(scene, model, npcAudio, rice, () => (person ? person.feedPoint : null));
+
+    player.pivot.visible = mode === 'pigeon';
+    applyMode();
 
     loaderEl?.classList.add('hidden');
     setTimeout(() => loaderEl?.remove(), 700);
@@ -84,6 +160,14 @@ loadPigeonModel()
         'Could not load the 3D pigeon model. Check your internet connection and try again.';
     }
   });
+
+// Load the seated person in parallel; if it fails, person mode is simply empty.
+Person.load(scene)
+  .then((p) => {
+    person = p;
+    applyMode();
+  })
+  .catch((err) => console.error('Failed to load person model:', err));
 
 // --- Resize ---
 window.addEventListener('resize', () => {
@@ -99,7 +183,8 @@ function animate(): void {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
 
-  player?.update(delta);
+  if (mode === 'pigeon') player?.update(delta);
+  person?.update(delta);
   for (const npc of npcs) npc.update(delta);
 
   controls.update();

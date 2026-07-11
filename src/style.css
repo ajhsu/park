@@ -87,6 +87,36 @@ canvas {
   text-decoration: underline;
 }
 
+#credits-btn {
+  display: inline-block;
+  margin-left: 2px;
+  padding: 2px 8px;
+  color: rgba(223, 230, 243, 0.85);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 11px;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+#credits-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#credits {
+  margin-top: 4px;
+}
+
+/* Scoped so it doesn't override the [hidden] attribute (higher specificity). */
+#credits:not([hidden]) {
+  display: block;
+}
+
 #mute-btn {
   position: fixed;
   top: 14px;
@@ -177,6 +207,137 @@ canvas {
 @media (pointer: coarse) {
   #joystick {
     display: block;
+  }
+}
+
+/* Mode toggle (top-right, beside the mute button). */
+#mode-toggle {
+  position: fixed;
+  top: 14px;
+  right: 66px;
+  height: 44px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #eef2fb;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 22px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: background 0.15s ease;
+  z-index: 30;
+}
+
+#mode-toggle:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Feed button (bottom-centre, person mode only). */
+#feed-btn {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 28px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #3a2b12;
+  background: linear-gradient(#ffe08a, #f4c14e);
+  border: none;
+  border-radius: 30px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition:
+    transform 0.08s ease,
+    filter 0.15s ease;
+  z-index: 30;
+  display: none;
+}
+
+#feed-btn:hover {
+  filter: brightness(1.05);
+}
+
+#feed-btn:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+/* Feed button only in person mode; joystick only makes sense in pigeon mode. */
+body.mode-person #feed-btn {
+  display: block;
+}
+
+body.mode-person #joystick {
+  display: none !important;
+}
+
+/* --- Compact layout for narrow / mobile screens --- */
+@media (max-width: 640px) {
+  /* Title: left-aligned and smaller so it clears the top-right buttons. */
+  #title {
+    top: 12px;
+    left: 12px;
+    right: auto;
+    max-width: 46vw;
+    text-align: left;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Top-right controls: more compact so they don't collide with the title. */
+  #mute-btn {
+    top: 12px;
+    right: 12px;
+    width: 38px;
+    height: 38px;
+    font-size: 17px;
+  }
+
+  #mode-toggle {
+    top: 12px;
+    right: 56px;
+    height: 38px;
+    padding: 0 12px;
+    font-size: 12px;
+    border-radius: 19px;
+  }
+
+  /* HUD credits: smaller and kept on the left half, away from the Feed button. */
+  #hud {
+    left: 10px;
+    bottom: 8px;
+    max-width: 56vw;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  /* Move Feed to the bottom-right so it no longer sits on top of the HUD. */
+  #feed-btn {
+    left: auto;
+    right: 16px;
+    bottom: 20px;
+    transform: none;
+    padding: 12px 24px;
+    font-size: 15px;
+  }
+
+  #feed-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* Nudge the joystick in a touch so it clears the HUD credits. */
+  #joystick {
+    left: 16px;
+    bottom: 88px;
   }
 }
 

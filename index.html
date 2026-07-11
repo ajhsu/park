@@ -14,23 +14,33 @@
     <button id="mute-btn" type="button" aria-label="Mute sound" aria-pressed="false" title="Mute sound">
       🔊
     </button>
+    <button id="mode-toggle" type="button">Switch to Pigeon</button>
+    <button id="feed-btn" type="button">Feed</button>
     <div id="loader">
       <div class="spinner"></div>
       <div>Loading pigeon…</div>
     </div>
     <div id="error"></div>
     <div id="hud">
-      <b>WASD</b> or the on-screen joystick to walk · drag to orbit · pinch/scroll to zoom<br />
-      Model: “Mourning dove” by
-      <a href="https://poly.pizza/m/1cF8DTp2sAi" target="_blank" rel="noopener">Poly by Google</a>
-      (CC-BY) via Poly Pizza ·
-      <a
-        href="https://commons.wikimedia.org/wiki/File:Columba_livia_-_Rock_Dove_XC541143.mp3"
-        target="_blank"
-        rel="noopener"
-        >coo</a
+      <span id="hint"></span>
+      <button id="credits-btn" type="button" aria-expanded="false" title="Show credits">
+        ⓘ Credits
+      </button>
+      <!-- Attribution shown on demand via the Credits button (assets are CC-BY / CC BY-SA / CC0). -->
+      <span id="credits" hidden
+        >Model: “Mourning dove” by
+        <a href="https://poly.pizza/m/1cF8DTp2sAi" target="_blank" rel="noopener">Poly by Google</a>
+        (CC-BY) via Poly Pizza ·
+        <a
+          href="https://commons.wikimedia.org/wiki/File:Columba_livia_-_Rock_Dove_XC541143.mp3"
+          target="_blank"
+          rel="noopener"
+          >coo</a
+        >
+        by Marie-Lan Taÿ Pamart (CC BY-SA 4.0) · person by
+        <a href="https://poly.pizza/m/HMnuH5geEG" target="_blank" rel="noopener">Quaternius</a>
+        (CC0)</span
       >
-      by Marie-Lan Taÿ Pamart (CC BY-SA 4.0)
     </div>
 
     <script type="module" src="/src/main.ts"></script>

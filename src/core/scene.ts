@@ -5,6 +5,6 @@ import { COLORS } from '../config';
 export function createScene(): THREE.Scene {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(COLORS.sky);
-  scene.fog = new THREE.Fog(COLORS.sky, 22, 55);
+  scene.fog = new THREE.Fog(COLORS.sky, 45, 105);
   return scene;
 }

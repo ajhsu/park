@@ -17,7 +17,7 @@ export function createControls(
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.minDistance = 1.5;
-  controls.maxDistance = 20;
+  controls.maxDistance = 40;
   controls.maxPolarAngle = Math.PI / 2 - 0.04; // don't dip below the ground
   controls.target.set(0, 0.5, 0);
   return controls;
