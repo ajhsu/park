@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { COLORS, GROUND_RADIUS } from '../config';
+import { addObstacle } from './collision';
 
 /**
  * Build the park environment (ground, plaza, path spokes, pond, fountain,
@@ -70,6 +71,9 @@ export function buildPark(scene: THREE.Scene): THREE.Group {
   pondRim.position.set(pondCenter.x, 0.015, pondCenter.z);
   park.add(pondRim);
 
+  // Keep pigeons off the water.
+  addObstacle(pondCenter.x, pondCenter.z, 4.8);
+
   // --- Reusable materials ---
   const trunkMat = new THREE.MeshStandardMaterial({ color: COLORS.trunk, roughness: 0.9 });
   const leafMats = COLORS.leaves.map(
@@ -111,6 +115,7 @@ export function buildPark(scene: THREE.Scene): THREE.Group {
     tree.position.set(x, 0, z);
     tree.scale.setScalar(scale);
     park.add(tree);
+    addObstacle(x, z, 0.45 * scale);
   }
 
   function makeBush(x: number, z: number, scale = 1): void {
@@ -120,6 +125,7 @@ export function buildPark(scene: THREE.Scene): THREE.Group {
     bush.castShadow = true;
     bush.receiveShadow = true;
     park.add(bush);
+    addObstacle(x, z, 0.5 * scale);
   }
 
   function makeBench(x: number, z: number, rotationY = 0): void {
@@ -153,6 +159,13 @@ export function buildPark(scene: THREE.Scene): THREE.Group {
     bench.position.set(x, 0, z);
     bench.rotation.y = rotationY;
     park.add(bench);
+
+    // Approximate the long seat with a few circles spaced along its length.
+    const cos = Math.cos(rotationY);
+    const sin = Math.sin(rotationY);
+    for (const lx of [-0.5, 0, 0.5]) {
+      addObstacle(x + lx * cos, z - lx * sin, 0.38);
+    }
   }
 
   function makeLamp(x: number, z: number): void {
@@ -179,6 +192,7 @@ export function buildPark(scene: THREE.Scene): THREE.Group {
     lamp.add(head);
     lamp.position.set(x, 0, z);
     park.add(lamp);
+    addObstacle(x, z, 0.25);
   }
 
   function makeRock(x: number, z: number, scale = 1): void {
@@ -189,6 +203,7 @@ export function buildPark(scene: THREE.Scene): THREE.Group {
     rock.castShadow = true;
     rock.receiveShadow = true;
     park.add(rock);
+    addObstacle(x, z, 0.4 * scale);
   }
 
   function makeFlower(x: number, z: number): void {
@@ -276,6 +291,7 @@ export function buildPark(scene: THREE.Scene): THREE.Group {
 
     fountain.position.set(x, 0, z);
     park.add(fountain);
+    addObstacle(x, z, 2.5);
   }
 
   function makePicnic(x: number, z: number): void {

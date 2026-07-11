@@ -10,8 +10,13 @@ import {
   NPC_FIGHT_RANGE,
   NPC_GATHER_RANGE,
   NPC_PERSON_GATHER_RADIUS,
+  PIGEON_COLLISION_RADIUS,
+  PLAYER_APPROACH_CHANCE,
+  PLAYER_CHARM_RANGE,
+  PLAYER_GATHER_RADIUS,
   RICE_EAT_DISTANCE,
 } from '../config';
+import { addAgent, resolveAgents, resolveStatic, type CollisionAgent } from '../world/collision';
 import type { FoodSource } from '../world/rice';
 import type { PigeonModel } from './pigeonModel';
 
@@ -118,10 +123,13 @@ export class Npc {
   private readonly food: FoodSource | null;
   private eatTimer = 0;
 
+  private readonly agent: CollisionAgent;
+
   // Social behaviour: the shared flock, the person to congregate around, and
   // the transient partners for chasing/fleeing/fighting interactions.
   private flock: Npc[] = [];
   private readonly personAnchor: GatherAnchor | null;
+  private readonly playerAnchor: GatherAnchor | null;
   private socialTimer = rand(1.5, 4);
   private chaseTarget: Npc | null = null;
   private fleeFrom: Npc | null = null;
@@ -134,6 +142,7 @@ export class Npc {
     audio?: NpcAudio,
     food?: FoodSource,
     personAnchor?: GatherAnchor,
+    playerAnchor?: GatherAnchor,
   ) {
     this.inner = model.proto.clone(true);
     this.inner.traverse((node) => {
@@ -168,6 +177,11 @@ export class Npc {
     scene.add(this.group);
     this.food = food ?? null;
     this.personAnchor = personAnchor ?? null;
+    this.playerAnchor = playerAnchor ?? null;
+
+    // Take part in collision so pigeons don't overlap each other or objects.
+    this.agent = { position: this.group.position, radius: PIGEON_COLLISION_RADIUS };
+    addAgent(this.agent);
   }
 
   /** Give this pigeon awareness of the whole flock for social behaviour. */
@@ -195,6 +209,10 @@ export class Npc {
     let diff = this.targetHeading - this.group.rotation.y;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
     this.group.rotation.y += diff * Math.min(1, 6 * delta);
+
+    // Keep clear of benches, trees, the person and the other pigeons.
+    resolveStatic(this.group.position, PIGEON_COLLISION_RADIUS);
+    resolveAgents(this.agent);
 
     this.updateCoo(delta);
   }
@@ -239,12 +257,15 @@ export class Npc {
       this.lookTimer = rand(0.8, 2.2);
     }
 
-    // Mostly potter about and peck alone; only occasionally (~20% of the
-    // times this fires) break out into a social interaction.
+    // Mostly potter about and peck alone; only occasionally break out into a
+    // social interaction. The player pigeon is charming, though: when it's
+    // nearby, birds notice sooner and are far more eager to go interact.
     this.socialTimer -= delta;
     if (this.socialTimer <= 0) {
-      this.socialTimer = rand(4, 9);
-      if (Math.random() < 0.2 && this.tryStartInteraction()) return;
+      const playerNear = this.playerDistance() <= PLAYER_CHARM_RANGE;
+      this.socialTimer = playerNear ? rand(1.5, 4) : rand(4, 9);
+      const chance = playerNear ? PLAYER_APPROACH_CHANCE : 0.2;
+      if (Math.random() < chance && this.tryStartInteraction()) return;
     }
 
     if (this.timer <= 0) {
@@ -270,6 +291,13 @@ export class Npc {
     const a = Math.random() * Math.PI * 2;
     const r = rand(min, max);
     return { x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r };
+  }
+
+  /** Distance to the player pigeon on the ground, or Infinity if unknown. */
+  private playerDistance(): number {
+    const p = this.playerAnchor?.() ?? null;
+    if (!p) return Infinity;
+    return Math.hypot(p.x - this.group.position.x, p.z - this.group.position.z);
   }
 
   /** Average position of flock-mates within gathering range, if any. */
@@ -302,6 +330,18 @@ export class Npc {
    */
   private tryStartInteraction(): boolean {
     const roll = Math.random();
+
+    // The player pigeon is the most charming bird in the park: if it's within
+    // range, nearby NPCs usually wander over to gather round it.
+    const player = this.playerAnchor?.() ?? null;
+    if (player) {
+      const pd = Math.hypot(player.x - this.group.position.x, player.z - this.group.position.z);
+      if (pd <= PLAYER_CHARM_RANGE && roll < PLAYER_APPROACH_CHANCE) {
+        this.target = this.ringTarget(player.x, player.z, 1.0, PLAYER_GATHER_RADIUS);
+        this.state = 'walk';
+        return true;
+      }
+    }
 
     // Wander over to congregate around the person on the bench.
     const anchor = this.personAnchor?.() ?? null;
@@ -500,11 +540,12 @@ export function spawnNpcs(
   audio?: NpcAudio,
   food?: FoodSource,
   personAnchor?: GatherAnchor,
+  playerAnchor?: GatherAnchor,
   count = NPC_COUNT,
 ): Npc[] {
   const npcs: Npc[] = [];
   for (let i = 0; i < count; i++) {
-    npcs.push(new Npc(scene, model, audio, food, personAnchor));
+    npcs.push(new Npc(scene, model, audio, food, personAnchor, playerAnchor));
   }
   // Let every bird see the whole flock so they can gather, chase and fight.
   for (const npc of npcs) npc.setFlock(npcs);

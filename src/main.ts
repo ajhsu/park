@@ -13,7 +13,8 @@ import { spawnNpcs, type Npc, type NpcAudio } from './entities/npc';
 import { loadCooBuffer } from './audio/coo';
 import { Person } from './entities/person';
 import { RiceSystem } from './world/rice';
-import { RICE_PER_FEED } from './config';
+import { addObstacle } from './world/collision';
+import { PERSON_COLLISION_RADIUS, RICE_PER_FEED } from './config';
 
 const app = document.getElementById('app')!;
 const loaderEl = document.getElementById('loader');
@@ -143,7 +144,16 @@ loadPigeonModel()
     });
     const npcAudio: NpcAudio | undefined = cooBuffer ? { listener, cooBuffer } : undefined;
     rice = new RiceSystem(scene);
-    npcs = spawnNpcs(scene, model, npcAudio, rice, () => (person ? person.feedPoint : null));
+    npcs = spawnNpcs(
+      scene,
+      model,
+      npcAudio,
+      rice,
+      () => (person ? person.feedPoint : null),
+      // The player pigeon is charming: NPCs are drawn to gather round it, but
+      // only while it's the active pigeon on screen.
+      () => (player && mode === 'pigeon' ? player.pivot.position : null),
+    );
 
     player.pivot.visible = mode === 'pigeon';
     applyMode();
@@ -165,6 +175,8 @@ loadPigeonModel()
 Person.load(scene)
   .then((p) => {
     person = p;
+    // Pigeons gather around the seated person but shouldn't stand inside them.
+    addObstacle(p.group.position.x, p.group.position.z, PERSON_COLLISION_RADIUS);
     applyMode();
   })
   .catch((err) => console.error('Failed to load person model:', err));

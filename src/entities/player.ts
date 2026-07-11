@@ -1,7 +1,14 @@
 import * as THREE from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { GROUND_RADIUS, MODEL_FORWARD_OFFSET, MOVE_SPEED, TURN_SPEED } from '../config';
+import {
+  GROUND_RADIUS,
+  MODEL_FORWARD_OFFSET,
+  MOVE_SPEED,
+  PIGEON_COLLISION_RADIUS,
+  TURN_SPEED,
+} from '../config';
 import type { MovementInput } from '../input/movement';
+import { addAgent, resolveAgents, resolveStatic, type CollisionAgent } from '../world/collision';
 import type { PigeonModel } from './pigeonModel';
 
 /**
@@ -21,6 +28,8 @@ export class Player {
   private readonly camRight = new THREE.Vector3();
   private readonly worldUp = new THREE.Vector3(0, 1, 0);
 
+  private readonly agent: CollisionAgent;
+
   constructor(
     scene: THREE.Scene,
     private readonly camera: THREE.PerspectiveCamera,
@@ -37,6 +46,10 @@ export class Player {
     this.pivot.add(this.inner);
 
     scene.add(this.pivot);
+
+    // Take part in collision so other pigeons and objects can't overlap us.
+    this.agent = { position: this.pivot.position, radius: PIGEON_COLLISION_RADIUS };
+    addAgent(this.agent);
   }
 
   update(delta: number): void {
@@ -51,6 +64,11 @@ export class Player {
     const { forward, strafe } = this.input.read();
     const inputMag = Math.min(1, Math.hypot(forward, strafe));
 
+    // Remember where we started so the camera follows the pigeon's real
+    // displacement this frame (including any nudge from collision below).
+    const prevX = pivot.position.x;
+    const prevZ = pivot.position.z;
+
     if (inputMag > 0.001) {
       moveVec.set(0, 0, 0);
       moveVec.addScaledVector(camForward, forward);
@@ -60,24 +78,9 @@ export class Player {
       // Turn the pigeon to face where it's walking.
       this.targetHeading = Math.atan2(moveVec.x, moveVec.z) + MODEL_FORWARD_OFFSET;
 
-      // Remember where we started so the camera follows the real displacement.
-      const prevX = pivot.position.x;
-      const prevZ = pivot.position.z;
-
       // Analog input scales speed (partial tilt walks slower).
       const step = MOVE_SPEED * inputMag * delta;
       pivot.position.addScaledVector(moveVec, step);
-
-      // Clamp to the ground disc.
-      const r = Math.hypot(pivot.position.x, pivot.position.z);
-      if (r > GROUND_RADIUS) {
-        pivot.position.x *= GROUND_RADIUS / r;
-        pivot.position.z *= GROUND_RADIUS / r;
-      }
-
-      // Move the camera by the pigeon's actual displacement (respects clamping).
-      camera.position.x += pivot.position.x - prevX;
-      camera.position.z += pivot.position.z - prevZ;
 
       // Characteristic head-bob + gentle body bob while strutting, like the NPCs.
       this.bobPhase += delta * MOVE_SPEED * inputMag * 3.2;
@@ -89,6 +92,22 @@ export class Player {
       inner.rotation.x += (0 - inner.rotation.x) * ease;
       pivot.position.y += (0 - pivot.position.y) * ease;
     }
+
+    // Don't walk through benches, trees, the person or other pigeons.
+    resolveStatic(pivot.position, PIGEON_COLLISION_RADIUS);
+    resolveAgents(this.agent);
+
+    // Clamp to the ground disc after any collision push.
+    const r = Math.hypot(pivot.position.x, pivot.position.z);
+    if (r > GROUND_RADIUS) {
+      pivot.position.x *= GROUND_RADIUS / r;
+      pivot.position.z *= GROUND_RADIUS / r;
+    }
+
+    // Move the camera by the pigeon's actual displacement (respects clamping
+    // and collision).
+    camera.position.x += pivot.position.x - prevX;
+    camera.position.z += pivot.position.z - prevZ;
 
     // Smoothly rotate the pigeon toward its heading (shortest path).
     let diff = this.targetHeading - pivot.rotation.y;

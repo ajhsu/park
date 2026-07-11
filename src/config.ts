@@ -21,6 +21,14 @@ export const NPC_CHASE_RANGE = 6; // how close another pigeon must be to trigger
 export const NPC_FIGHT_RANGE = 1.4; // how close two pigeons must be to squabble
 export const NPC_PERSON_GATHER_RADIUS = 2.8; // ring radius pigeons gather in around the person
 
+/**
+ * Player "charm": the player pigeon is more magnetic than its flock-mates, so
+ * nearby NPCs notice it sooner and prefer to wander over and gather round it.
+ */
+export const PLAYER_CHARM_RANGE = 13; // radius within which NPCs are drawn to the player
+export const PLAYER_GATHER_RADIUS = 2.4; // ring radius NPCs gather in around the player
+export const PLAYER_APPROACH_CHANCE = 0.75; // chance an in-range NPC chooses to approach the player
+
 /** NPC cooing (3D positional audio) tuning. */
 export const COO_MIN_INTERVAL = 30; // seconds — shortest gap between an NPC's coos
 export const COO_MAX_INTERVAL = 120; // seconds — longest gap between an NPC's coos
@@ -43,6 +51,10 @@ export const RICE_FEED_DISTANCE = 1.8; // how far in front of the person the ric
 export const RICE_SIZE = 0.018; // grain radius (small, like a real rice grain)
 export const RICE_MAX = 200; // cap on simultaneous grains
 export const RICE_EAT_DISTANCE = 0.35; // how close a pigeon must be to eat a grain
+
+/** Simple ground-plane collision tuning (every collider is a circle in x/z). */
+export const PIGEON_COLLISION_RADIUS = 0.22; // a pigeon's footprint on the ground
+export const PERSON_COLLISION_RADIUS = 0.55; // the seated person's footprint
 
 /** Colour palette shared across the scene. */
 export const COLORS = {
