@@ -9,7 +9,8 @@ import { buildPark } from './world/park';
 import { createKeyboard } from './input/keyboard';
 import { loadPigeonModel } from './entities/pigeonModel';
 import { Player } from './entities/player';
-import { spawnNpcs, type Npc } from './entities/npc';
+import { spawnNpcs, type Npc, type NpcAudio } from './entities/npc';
+import { loadCooBuffer } from './audio/coo';
 
 const app = document.getElementById('app')!;
 const loaderEl = document.getElementById('loader');
@@ -26,14 +27,34 @@ buildPark(scene);
 
 const keys = createKeyboard();
 
+// --- Audio (3D positional cooing) ---
+const listener = new THREE.AudioListener();
+camera.add(listener);
+
+// Browsers block audio until a user gesture; resume the context on first input.
+const resumeAudio = (): void => {
+  void listener.context.resume();
+  window.removeEventListener('pointerdown', resumeAudio);
+  window.removeEventListener('keydown', resumeAudio);
+};
+window.addEventListener('pointerdown', resumeAudio);
+window.addEventListener('keydown', resumeAudio);
+
 // --- Entities (created once the model has loaded) ---
 let player: Player | null = null;
 let npcs: Npc[] = [];
 
 loadPigeonModel()
-  .then((model) => {
+  .then(async (model) => {
     player = new Player(scene, camera, controls, keys, model);
-    npcs = spawnNpcs(scene, model);
+
+    // Load the coo audio; if it fails, the pigeons simply stay silent.
+    const cooBuffer = await loadCooBuffer().catch((err) => {
+      console.error('Failed to load coo audio:', err);
+      return null;
+    });
+    const npcAudio: NpcAudio | undefined = cooBuffer ? { listener, cooBuffer } : undefined;
+    npcs = spawnNpcs(scene, model, npcAudio);
 
     loaderEl?.classList.add('hidden');
     setTimeout(() => loaderEl?.remove(), 700);

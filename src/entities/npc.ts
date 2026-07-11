@@ -1,5 +1,12 @@
 import * as THREE from 'three';
-import { GROUND_RADIUS, NPC_COUNT } from '../config';
+import {
+  COO_MAX_INTERVAL,
+  COO_MIN_INTERVAL,
+  COO_REF_DISTANCE,
+  COO_VOLUME,
+  GROUND_RADIUS,
+  NPC_COUNT,
+} from '../config';
 import type { PigeonModel } from './pigeonModel';
 
 type NpcMode = 'walk' | 'idle';
@@ -7,6 +14,12 @@ type NpcMode = 'walk' | 'idle';
 interface WanderTarget {
   x: number;
   z: number;
+}
+
+/** Shared audio resources needed for an NPC to coo in 3D space. */
+export interface NpcAudio {
+  listener: THREE.AudioListener;
+  cooBuffer: AudioBuffer;
 }
 
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
@@ -35,7 +48,10 @@ export class Npc {
   private peckPhase = rand(0, Math.PI * 2);
   private target: WanderTarget = randomWanderTarget();
 
-  constructor(scene: THREE.Scene, model: PigeonModel) {
+  private readonly coo: THREE.PositionalAudio | null = null;
+  private cooTimer = rand(COO_MIN_INTERVAL, COO_MAX_INTERVAL);
+
+  constructor(scene: THREE.Scene, model: PigeonModel, audio?: NpcAudio) {
     this.inner = model.proto.clone(true);
     this.inner.traverse((node) => {
       if ((node as THREE.Mesh).isMesh) {
@@ -54,6 +70,16 @@ export class Npc {
     const heading = rand(0, Math.PI * 2);
     this.group.rotation.y = heading;
     this.targetHeading = heading;
+
+    if (audio) {
+      const coo = new THREE.PositionalAudio(audio.listener);
+      coo.setBuffer(audio.cooBuffer);
+      coo.setRefDistance(COO_REF_DISTANCE);
+      coo.setRolloffFactor(1.4);
+      coo.setVolume(COO_VOLUME);
+      this.group.add(coo);
+      this.coo = coo;
+    }
 
     scene.add(this.group);
   }
@@ -107,14 +133,31 @@ export class Npc {
     let diff = this.targetHeading - group.rotation.y;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
     group.rotation.y += diff * Math.min(1, 6 * delta);
+
+    // Coo now and then, with a little pitch variation for character.
+    if (this.coo) {
+      this.cooTimer -= delta;
+      if (this.cooTimer <= 0) {
+        if (!this.coo.isPlaying && this.coo.context.state === 'running') {
+          this.coo.setPlaybackRate(rand(0.9, 1.15));
+          this.coo.play();
+        }
+        this.cooTimer = rand(COO_MIN_INTERVAL, COO_MAX_INTERVAL);
+      }
+    }
   }
 }
 
 /** Spawn the configured number of wandering NPC pigeons. */
-export function spawnNpcs(scene: THREE.Scene, model: PigeonModel, count = NPC_COUNT): Npc[] {
+export function spawnNpcs(
+  scene: THREE.Scene,
+  model: PigeonModel,
+  audio?: NpcAudio,
+  count = NPC_COUNT,
+): Npc[] {
   const npcs: Npc[] = [];
   for (let i = 0; i < count; i++) {
-    npcs.push(new Npc(scene, model));
+    npcs.push(new Npc(scene, model, audio));
   }
   return npcs;
 }

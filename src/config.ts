@@ -15,6 +15,12 @@ export const GROUND_RADIUS = 13; // how far a pigeon can roam across the park
 /** Number of wandering NPC pigeons to spawn. */
 export const NPC_COUNT = 6;
 
+/** NPC cooing (3D positional audio) tuning. */
+export const COO_MIN_INTERVAL = 15; // seconds — shortest gap between an NPC's coos
+export const COO_MAX_INTERVAL = 40; // seconds — longest gap between an NPC's coos
+export const COO_VOLUME = 1.6; // per-pigeon coo volume
+export const COO_REF_DISTANCE = 6; // distance at which the coo is at full volume
+
 /** Colour palette shared across the scene. */
 export const COLORS = {
   sky: 0x9cc7e6,
