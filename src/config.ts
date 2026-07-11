@@ -22,8 +22,8 @@ export const NPC_FIGHT_RANGE = 1.4; // how close two pigeons must be to squabble
 export const NPC_PERSON_GATHER_RADIUS = 2.8; // ring radius pigeons gather in around the person
 
 /** NPC cooing (3D positional audio) tuning. */
-export const COO_MIN_INTERVAL = 60; // seconds — shortest gap between an NPC's coos
-export const COO_MAX_INTERVAL = 600; // seconds — longest gap between an NPC's coos
+export const COO_MIN_INTERVAL = 30; // seconds — shortest gap between an NPC's coos
+export const COO_MAX_INTERVAL = 120; // seconds — longest gap between an NPC's coos
 export const COO_VOLUME = 1.6; // per-pigeon coo volume
 export const COO_REF_DISTANCE = 6; // distance at which the coo is at full volume
 
@@ -40,7 +40,7 @@ export const PERSON_MODEL_YAW_OFFSET = 0; // aligns the model's front with PERSO
 export const RICE_PER_FEED = 16; // grains scattered per feed
 export const RICE_SPREAD = 1.2; // scatter radius of a feed
 export const RICE_FEED_DISTANCE = 1.8; // how far in front of the person the rice lands
-export const RICE_SIZE = 0.05; // grain radius
+export const RICE_SIZE = 0.018; // grain radius (small, like a real rice grain)
 export const RICE_MAX = 200; // cap on simultaneous grains
 export const RICE_EAT_DISTANCE = 0.35; // how close a pigeon must be to eat a grain
 
