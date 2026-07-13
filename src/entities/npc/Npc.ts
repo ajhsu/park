@@ -6,7 +6,6 @@ import {
   COO_VOLUME,
   GROUND_RADIUS,
   NPC_CHASE_RANGE,
-  NPC_COUNT,
   NPC_FIGHT_RANGE,
   NPC_GATHER_RANGE,
   NPC_PERSON_GATHER_RADIUS,
@@ -18,10 +17,12 @@ import {
   PLAYER_FIGHT_RANGE,
   PLAYER_GATHER_RADIUS,
   RICE_EAT_DISTANCE,
-} from '../config';
-import { addAgent, resolveAgents, resolveStatic, type CollisionAgent } from '../world/collision';
-import type { FoodSource } from '../world/rice';
-import type { PigeonModel } from './pigeonModel';
+} from '../../config';
+import { rand, ringPoint, randomPointOnDisc, shortestAngle, type Point2 } from '../../utils/math';
+import { type CollisionAgent, type CollisionWorld } from '../../world/collision';
+import type { FoodSource } from '../../world/rice';
+import type { PigeonModel } from '../pigeonModel';
+import { applyPigeonTint } from '../pigeon/plumage';
 
 /**
  * Behavioural states. `walk`/`idle` are the ambient loop (wander + peck);
@@ -32,10 +33,7 @@ type NpcMode = 'walk' | 'idle' | 'chase' | 'flee' | 'fight';
 /** A ground point pigeons can be told to gather around (e.g. the person). */
 export type GatherAnchor = () => THREE.Vector3 | null;
 
-interface WanderTarget {
-  x: number;
-  z: number;
-}
+type WanderTarget = Point2;
 
 /** Shared audio resources needed for an NPC to coo in 3D space. */
 export interface NpcAudio {
@@ -43,64 +41,9 @@ export interface NpcAudio {
   cooBuffer: AudioBuffer;
 }
 
-const rand = (a: number, b: number): number => a + Math.random() * (b - a);
-
-/**
- * Distinct plumage "morphs" — each is a foundation colour drawn from real
- * pigeon colour families (blue-bar slate, red-bar rust, ash-red cream,
- * chocolate checker, dark spread, pale pied). They look clearly different
- * from one another; within-group jitter is added separately.
- */
-const PIGEON_MORPHS: number[] = [
-  0x9aa4b0, // blue-bar slate (cool blue-grey)
-  0xc0673a, // red-bar (rich rust / orange-brown)
-  0xe7d2bd, // ash-red (warm cream)
-  0x8a6446, // chocolate checker (brown)
-  0x585a63, // spread (dark slate, near-black)
-  0xf1efe9, // pied / pale (near-white)
-];
-
-/**
- * Pick a foundation morph, then nudge it by a small random amount so birds in
- * the same morph share a family colour but each is subtly unique.
- */
-function pickPigeonTint(): THREE.Color {
-  const base = PIGEON_MORPHS[Math.floor(Math.random() * PIGEON_MORPHS.length)];
-  const tint = new THREE.Color(base);
-  // Subtle within-group variation: tiny hue/saturation/lightness jitter.
-  const hsl = { h: 0, s: 0, l: 0 };
-  tint.getHSL(hsl);
-  hsl.h = (hsl.h + rand(-0.02, 0.02) + 1) % 1;
-  hsl.s = THREE.MathUtils.clamp(hsl.s + rand(-0.06, 0.06), 0, 1);
-  hsl.l = THREE.MathUtils.clamp(hsl.l + rand(-0.07, 0.07), 0, 1);
-  tint.setHSL(hsl.h, hsl.s, hsl.l);
-  return tint;
-}
-
-/** Pick a plumage tint and apply it to every material on a cloned pigeon. */
-function applyPigeonTint(model: THREE.Object3D): void {
-  const tint = pickPigeonTint();
-  model.traverse((node) => {
-    const mesh = node as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    const clone = (mat: THREE.Material): THREE.Material => {
-      const cloned = (mat as THREE.MeshStandardMaterial).clone();
-      if ((cloned as THREE.MeshStandardMaterial).color) {
-        (cloned as THREE.MeshStandardMaterial).color.multiply(tint);
-      }
-      return cloned;
-    };
-    mesh.material = Array.isArray(mesh.material)
-      ? mesh.material.map(clone)
-      : clone(mesh.material);
-  });
-}
-
 /** A random spot on the ground, kept a little inside the roam radius. */
 function randomWanderTarget(): WanderTarget {
-  const a = Math.random() * Math.PI * 2;
-  const r = rand(2, GROUND_RADIUS - 2);
-  return { x: Math.cos(a) * r, z: Math.sin(a) * r };
+  return randomPointOnDisc(2, GROUND_RADIUS - 2);
 }
 
 /**
@@ -142,6 +85,7 @@ export class Npc {
   constructor(
     scene: THREE.Scene,
     model: PigeonModel,
+    private readonly world: CollisionWorld,
     audio?: NpcAudio,
     food?: FoodSource,
     personAnchor?: GatherAnchor,
@@ -184,7 +128,7 @@ export class Npc {
 
     // Take part in collision so pigeons don't overlap each other or objects.
     this.agent = { position: this.group.position, radius: PIGEON_COLLISION_RADIUS };
-    addAgent(this.agent);
+    this.world.addAgent(this.agent);
   }
 
   /** Give this pigeon awareness of the whole flock for social behaviour. */
@@ -244,13 +188,12 @@ export class Npc {
     }
 
     // Smoothly rotate toward the desired heading (shortest path).
-    let diff = this.targetHeading - this.group.rotation.y;
-    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    this.group.rotation.y += diff * Math.min(1, 6 * delta);
+    this.group.rotation.y +=
+      shortestAngle(this.targetHeading, this.group.rotation.y) * Math.min(1, 6 * delta);
 
     // Keep clear of benches, trees, the person and the other pigeons.
-    resolveStatic(this.group.position, PIGEON_COLLISION_RADIUS);
-    resolveAgents(this.agent);
+    this.world.resolveStatic(this.group.position, PIGEON_COLLISION_RADIUS);
+    this.world.resolveAgents(this.agent);
 
     this.updateCoo(delta);
   }
@@ -326,9 +269,7 @@ export class Npc {
 
   /** A random spot in a ring around a point (used to gather near a target). */
   private ringTarget(cx: number, cz: number, min: number, max: number): WanderTarget {
-    const a = Math.random() * Math.PI * 2;
-    const r = rand(min, max);
-    return { x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r };
+    return ringPoint(cx, cz, min, max);
   }
 
   /** Distance to the player pigeon on the ground, or Infinity if unknown. */
@@ -569,23 +510,4 @@ export class Npc {
       this.strut(dx, dz, dist, this.speed + 0.8, delta); // hurry toward food
     }
   }
-}
-
-/** Spawn the configured number of wandering NPC pigeons. */
-export function spawnNpcs(
-  scene: THREE.Scene,
-  model: PigeonModel,
-  audio?: NpcAudio,
-  food?: FoodSource,
-  personAnchor?: GatherAnchor,
-  playerAnchor?: GatherAnchor,
-  count = NPC_COUNT,
-): Npc[] {
-  const npcs: Npc[] = [];
-  for (let i = 0; i < count; i++) {
-    npcs.push(new Npc(scene, model, audio, food, personAnchor, playerAnchor));
-  }
-  // Let every bird see the whole flock so they can gather, chase and fight.
-  for (const npc of npcs) npc.setFlock(npcs);
-  return npcs;
 }

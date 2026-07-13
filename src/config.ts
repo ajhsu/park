@@ -46,7 +46,8 @@ export const COO_VOLUME = 1.6; // per-pigeon coo volume
 export const COO_REF_DISTANCE = 6; // distance at which the coo is at full volume
 
 /** Person (Quaternius "Man", CC0 via Poly Pizza) seated on a bench feeding the pigeons. */
-export const PERSON_MODEL_URL = 'https://static.poly.pizza/3746be88-6799-4817-929b-6bc067c47caa.glb';
+export const PERSON_MODEL_URL =
+  'https://static.poly.pizza/3746be88-6799-4817-929b-6bc067c47caa.glb';
 export const PERSON_SIT_CLIP = 'Man_Sitting'; // animation clip name (matches "…|Man_Sitting")
 export const PERSON_HEIGHT = 1.7; // target standing height in world units (for scaling)
 export const PERSON_POSITION = { x: 0, z: -4.32 }; // seated on the south bench (butt on the seat, clear of the backrest)
@@ -95,4 +96,3 @@ export const COLORS = {
   blanket: 0xd45d5d,
   blanketStripe: 0xf2e3c6,
 } as const;
-

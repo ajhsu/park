@@ -12,7 +12,8 @@ import {
   TURN_SPEED,
 } from '../config';
 import type { MovementInput } from '../input/movement';
-import { addAgent, resolveAgents, resolveStatic, type CollisionAgent } from '../world/collision';
+import { type CollisionAgent, type CollisionWorld } from '../world/collision';
+import { shortestAngle } from '../utils/math';
 import type { PigeonModel } from './pigeonModel';
 
 /**
@@ -46,6 +47,7 @@ export class Player {
     private readonly controls: OrbitControls,
     private readonly input: MovementInput,
     model: PigeonModel,
+    private readonly world: CollisionWorld,
   ) {
     this.pivot = new THREE.Group();
     this.pivot.scale.setScalar(model.scale);
@@ -59,7 +61,7 @@ export class Player {
 
     // Take part in collision so other pigeons and objects can't overlap us.
     this.agent = { position: this.pivot.position, radius: PIGEON_COLLISION_RADIUS };
-    addAgent(this.agent);
+    this.world.addAgent(this.agent);
   }
 
   /** Attach a positional coo so the player pigeon can call out when it coos. */
@@ -173,8 +175,8 @@ export class Player {
     this.updateAction(delta);
 
     // Don't walk through benches, trees, the person or other pigeons.
-    resolveStatic(pivot.position, PIGEON_COLLISION_RADIUS);
-    resolveAgents(this.agent);
+    this.world.resolveStatic(pivot.position, PIGEON_COLLISION_RADIUS);
+    this.world.resolveAgents(this.agent);
 
     // Clamp to the ground disc after any collision push.
     const r = Math.hypot(pivot.position.x, pivot.position.z);
@@ -189,9 +191,8 @@ export class Player {
     camera.position.z += pivot.position.z - prevZ;
 
     // Smoothly rotate the pigeon toward its heading (shortest path).
-    let diff = this.targetHeading - pivot.rotation.y;
-    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    pivot.rotation.y += diff * Math.min(1, TURN_SPEED * delta);
+    pivot.rotation.y +=
+      shortestAngle(this.targetHeading, pivot.rotation.y) * Math.min(1, TURN_SPEED * delta);
 
     controls.target.set(pivot.position.x, 0.5, pivot.position.z);
   }
